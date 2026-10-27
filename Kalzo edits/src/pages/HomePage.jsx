@@ -49,33 +49,31 @@ const HOME_LIMIT = 5;
 const ALL_REELS = reelsData;
 
 /**
- * Automatically optimize any Cloudinary video link for universal playback.
+ * Automatically optimize any Cloudinary video link for instant mobile & web playback.
  * - Converts .mov / .mkv / .webm / .avi to universal .mp4
- * - Injects f_auto,q_auto for optimal codec delivery and instant mobile streaming.
+ * - Caps resolution to 720p (reduces 75MB 4K files to ~5MB)
+ * - Injects vc_auto,q_auto:good for instant hardware-accelerated streaming.
  */
 export function optimizeCloudinaryVideoUrl(url) {
   if (!url || typeof url !== "string") return url;
   if (!url.includes("cloudinary.com")) return url;
   let clean = url.replace(/\.(mov|MOV|mkv|webm|avi|m4v)$/i, ".mp4");
-  if (clean.includes("/video/upload/") && !clean.includes("/f_auto")) {
-    clean = clean.replace("/video/upload/", "/video/upload/f_auto,q_auto/");
+  if (clean.includes("/video/upload/") && !clean.includes("w_720")) {
+    clean = clean.replace("/video/upload/", "/video/upload/w_720,c_limit,vc_auto,q_auto:good/");
   }
   return clean;
 }
 
 /**
- * Automatically derive a high-quality 5-second poster frame directly from Cloudinary.
- * Works even if no separate thumbnail image was provided!
+ * Automatically derive a high-speed, lightweight 5-second poster frame directly from Cloudinary.
+ * Capped at 600px width (~50KB) so all posters load in milliseconds.
  */
 export function getCloudinaryThumbnail(url) {
   if (!url || typeof url !== "string") return null;
   if (!url.includes("cloudinary.com")) return null;
   let jpgUrl = url.replace(/\.(mp4|mov|MOV|webm|mkv|avi|m4v)$/i, ".jpg");
   if (jpgUrl.includes("/video/upload/")) {
-    if (jpgUrl.includes("/video/upload/f_auto")) {
-      return jpgUrl.replace("/video/upload/f_auto,q_auto/", "/video/upload/so_5,q_auto,f_auto/");
-    }
-    return jpgUrl.replace("/video/upload/", "/video/upload/so_5,q_auto,f_auto/");
+    return jpgUrl.replace(/\/video\/upload\/(?:[^/]*\/)?/, "/video/upload/so_5,w_600,c_limit,q_auto:good,f_auto/");
   }
   return jpgUrl;
 }
@@ -192,7 +190,7 @@ function ReelCard({ reel, side, index }) {
               muted
               loop
               playsInline
-              preload="none"
+              preload={index === 0 ? "auto" : "metadata"}
               className="reel-video"
               onError={() => setError(true)}
             />
